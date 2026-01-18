@@ -1,0 +1,122 @@
+# AIMET FP16 Mixed Precision Training Configuration for NAFNet
+# Activation: 16-bit, Weight: 16-bit (a16w16)
+
+name: NAFNet_AIMET_a16w16_FP16
+model_type: ImageRestorationModel
+scale: 1
+num_gpu: auto
+manual_seed: 10
+
+# 数据集配置
+datasets:
+  train:
+    name: TrainSet
+    type: PairedImageDataset
+    dataroot_gt: datasets/SIDD/train/gt  # 修改为实际路径
+    dataroot_lq: datasets/SIDD/train/noisy
+    filename_tmpl: '{}'
+    io_backend:
+      type: disk
+
+    gt_size: 256
+    use_flip: true
+    use_rot: true
+
+    # 数据加载
+    use_shuffle: true
+    num_worker_per_gpu: 8
+    batch_size_per_gpu: 16  # FP16 可使用更大 batch size
+    dataset_enlarge_ratio: 1
+    prefetch_mode: cuda  # FP16 推荐使用 CUDA 预取
+    pin_memory: true
+
+  val:
+    name: ValSet
+    type: PairedImageDataset
+    dataroot_gt: datasets/SIDD/val/gt
+    dataroot_lq: datasets/SIDD/val/noisy
+    io_backend:
+      type: disk
+
+# 网络结构
+network_g:
+  type: NAFNet
+  img_channel: 3
+  width: 32
+  middle_blk_num: 1
+  enc_blk_nums: [1, 1, 1, 28]
+  dec_blk_nums: [1, 1, 1, 1]
+
+# 训练设置
+train:
+  optim_g:
+    type: AdamW
+    lr: !!float 3e-4  # FP16 可使用稍高学习率
+    weight_decay: !!float 1e-4
+    betas: [0.9, 0.9]
+
+  scheduler:
+    type: TrueCosineAnnealingLR
+    T_max: 200000
+    eta_min: !!float 1e-7
+
+  total_iter: 200000
+  warmup_iter: 1000
+
+  # 损失函数
+  pixel_opt:
+    type: PSNRLoss
+    loss_weight: 1.0
+    reduction: mean
+
+# 验证设置
+val:
+  val_freq: !!float 5e3
+  save_img: false
+  rgb2bgr: true
+  use_image: true
+  max_minibatch: 8
+
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
+
+# 日志设置
+logger:
+  print_freq: 200
+  save_checkpoint_freq: !!float 5e3
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+# 分布式训练
+dist_params:
+  backend: nccl
+  port: 29500
+
+# 路径配置
+path:
+  pretrain_network_g: experiments/pretrained_models/NAFNet-SIDD-width32.pth  # 预训练 FP32 模型
+  strict_load_g: true
+  resume_state: ~
+  root: ./
+  experiments_root: experiments/NAFNet_AIMET_a16w16_FP16
+  models: experiments/NAFNet_AIMET_a16w16_FP16/models
+  training_states: experiments/NAFNet_AIMET_a16w16_FP16/training_states
+  log: experiments/NAFNet_AIMET_a16w16_FP16/log
+  visualization: experiments/NAFNet_AIMET_a16w16_FP16/visualization
+
+# FP16 特定配置（在命令行参数中指定）
+# --activation_bw 16
+# --param_bw 16
+# --calibration_batches 100
+# --quantization_config options/train/quantization/aimet_config_fp16.json
+# 或使用原生 AMP: --use_native_amp --dynamic_loss_scale
+
