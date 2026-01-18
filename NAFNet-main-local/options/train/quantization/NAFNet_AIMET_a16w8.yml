@@ -1,0 +1,125 @@
+# AIMET Quantization Training Configuration for NAFNet
+# Activation: 16-bit, Weight: 8-bit (a16w8)
+# 16-bit activation provides higher precision for feature maps
+# 8-bit weight reduces model size and computation
+
+name: NAFNet_AIMET_a16w8_QAT
+model_type: ImageRestorationModel
+scale: 1
+num_gpu: auto
+manual_seed: 10
+
+# 数据集配置
+datasets:
+  train:
+    name: TrainSet
+    type: PairedImageDataset
+    dataroot_gt: datasets/SIDD/train/gt  # 修改为实际路径
+    dataroot_lq: datasets/SIDD/train/noisy
+    filename_tmpl: '{}'
+    io_backend:
+      type: disk
+
+    gt_size: 256
+    use_flip: true
+    use_rot: true
+
+    # 数据加载
+    use_shuffle: true
+    num_worker_per_gpu: 8
+    batch_size_per_gpu: 8
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+  val:
+    name: ValSet
+    type: PairedImageDataset
+    dataroot_gt: datasets/SIDD/val/gt
+    dataroot_lq: datasets/SIDD/val/noisy
+    io_backend:
+      type: disk
+
+# 网络结构
+network_g:
+  type: NAFNet
+  img_channel: 3
+  width: 32
+  middle_blk_num: 1
+  enc_blk_nums: [1, 1, 1, 28]
+  dec_blk_nums: [1, 1, 1, 1]
+
+# 训练设置
+train:
+  optim_g:
+    type: AdamW
+    lr: !!float 8e-5  # A16W8 QAT 使用更小学习率，因为权重量化更激进
+    weight_decay: !!float 1e-4
+    betas: [0.9, 0.9]
+
+  scheduler:
+    type: TrueCosineAnnealingLR
+    T_max: 250000  # A16W8 需要更长训练时间
+    eta_min: !!float 1e-7
+
+  total_iter: 250000  # 增加训练迭代次数以适应 8-bit 权重
+  warmup_iter: 2000   # 更长的 warmup
+
+  # 损失函数
+  pixel_opt:
+    type: PSNRLoss
+    loss_weight: 1.0
+    reduction: mean
+
+# 验证设置
+val:
+  val_freq: !!float 5e3
+  save_img: false
+  rgb2bgr: true
+  use_image: true
+  max_minibatch: 8
+
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
+
+# 日志设置
+logger:
+  print_freq: 200
+  save_checkpoint_freq: !!float 5e3
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+# 分布式训练
+dist_params:
+  backend: nccl
+  port: 29500
+
+# 路径配置
+path:
+  pretrain_network_g: experiments/pretrained_models/NAFNet-SIDD-width32.pth  # 预训练 FP32 模型
+  strict_load_g: true
+  resume_state: ~
+  root: ./
+  experiments_root: experiments/NAFNet_AIMET_a16w8_QAT
+  models: experiments/NAFNet_AIMET_a16w8_QAT/models
+  training_states: experiments/NAFNet_AIMET_a16w8_QAT/training_states
+  log: experiments/NAFNet_AIMET_a16w8_QAT/log
+  visualization: experiments/NAFNet_AIMET_a16w8_QAT/visualization
+
+# AIMET A16W8 配置说明
+# 命令行参数：
+# --activation_bw 16         # 16-bit activation
+# --param_bw 8               # 8-bit weight (per-channel quantization recommended)
+# --calibration_batches 100  # 校准批次
+# --quantization_config options/train/quantization/aimet_config_a16w8_perchannel.json
+# --weight_aug               # 启用权重增强（推荐）
+# --mixed_precision_aug      # 启用混合精度数据增强（推荐）
+

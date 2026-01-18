@@ -1,0 +1,167 @@
+{
+  "//": "AIMET Quantization Configuration for A16W8 (16-bit activation, 8-bit weight)",
+  "//": "Per-channel quantization for weights provides better accuracy with 8-bit quantization",
+  
+  "defaults": {
+    "ops": {
+      "is_output_quantized": "True"
+    },
+    "params": {
+      "is_quantized": "True",
+      "is_symmetric": "True"
+    },
+    "strict_symmetric": "False",
+    "unsigned_symmetric": "False",
+    "per_channel_quantization": "True"
+  },
+  
+  "params": {
+    "weight": {
+      "is_quantized": "True",
+      "is_symmetric": "True"
+    },
+    "bias": {
+      "is_quantized": "False"
+    }
+  },
+  
+  "op_type": {
+    "Conv": {
+      "is_output_quantized": "True",
+      "params": {
+        "weight": {
+          "is_quantized": "True",
+          "is_symmetric": "True"
+        },
+        "bias": {
+          "is_quantized": "False"
+        }
+      }
+    },
+    "ConvTranspose": {
+      "is_output_quantized": "True",
+      "params": {
+        "weight": {
+          "is_quantized": "True",
+          "is_symmetric": "True"
+        },
+        "bias": {
+          "is_quantized": "False"
+        }
+      }
+    },
+    "Linear": {
+      "is_output_quantized": "True",
+      "params": {
+        "weight": {
+          "is_quantized": "True",
+          "is_symmetric": "True"
+        },
+        "bias": {
+          "is_quantized": "False"
+        }
+      }
+    },
+    "BatchNorm": {
+      "is_output_quantized": "True",
+      "params": {
+        "is_quantized": "False"
+      }
+    },
+    "LayerNorm": {
+      "is_output_quantized": "True",
+      "params": {
+        "is_quantized": "False"
+      }
+    },
+    "InstanceNorm": {
+      "is_output_quantized": "True",
+      "params": {
+        "is_quantized": "False"
+      }
+    },
+    "GroupNorm": {
+      "is_output_quantized": "True",
+      "params": {
+        "is_quantized": "False"
+      }
+    },
+    "Sigmoid": {
+      "is_output_quantized": "True"
+    },
+    "Tanh": {
+      "is_output_quantized": "True"
+    },
+    "ReLU": {
+      "is_output_quantized": "True"
+    },
+    "ReLU6": {
+      "is_output_quantized": "True"
+    },
+    "LeakyReLU": {
+      "is_output_quantized": "True"
+    },
+    "PReLU": {
+      "is_output_quantized": "True",
+      "params": {
+        "weight": {
+          "is_quantized": "True"
+        }
+      }
+    },
+    "GELU": {
+      "is_output_quantized": "True"
+    },
+    "SiLU": {
+      "is_output_quantized": "True"
+    },
+    "Softmax": {
+      "is_output_quantized": "True"
+    },
+    "MaxPool": {
+      "is_output_quantized": "False"
+    },
+    "AvgPool": {
+      "is_output_quantized": "True"
+    },
+    "AdaptiveAvgPool": {
+      "is_output_quantized": "True"
+    },
+    "Upsample": {
+      "is_output_quantized": "False"
+    },
+    "interpolate": {
+      "is_output_quantized": "False"
+    }
+  },
+  
+  "supergroups": [
+    {
+      "op_list": ["Conv", "ReLU"]
+    },
+    {
+      "op_list": ["Conv", "BatchNorm"]
+    },
+    {
+      "op_list": ["Conv", "BatchNorm", "ReLU"]
+    },
+    {
+      "op_list": ["Linear", "ReLU"]
+    },
+    {
+      "op_list": ["Conv", "GELU"]
+    },
+    {
+      "op_list": ["Linear", "GELU"]
+    }
+  ],
+  
+  "model_input": {
+    "is_input_quantized": "True"
+  },
+  
+  "model_output": {
+    "is_output_quantized": "True"
+  }
+}
+
